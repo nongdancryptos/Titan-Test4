@@ -37,8 +37,14 @@ create_nodes() {
 
   for i in $(seq 1 $node_count); do
     name="titan-node-$i"
+
+    if multipass info $name >/dev/null 2>&1; then
+      echo -e "${RED}⚠️ VM $name đã tồn tại, bỏ qua.${NC}"
+      continue
+    fi
+
     echo -e "\n${CYAN}🚀 Tạo VM: $name...${NC}"
-    multipass launch $IMAGE --name $name --mem 2G --disk 10G --cpus 2
+    multipass launch $IMAGE --name $name --memory 2G --disk 10G --cpus 2
 
     echo -e "${CYAN}⚙️ Cài Titan Agent trong $name...${NC}"
     multipass exec $name -- bash -c "
@@ -49,7 +55,8 @@ create_nodes() {
       sudo wget -q $TITAN_URL &&
       sudo unzip agent-linux.zip &&
       sudo chmod +x agent &&
-      sudo ./agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key
+      echo '@reboot root nohup /opt/titanagent/agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key > /opt/titanagent/agent.log 2>&1 &' | sudo tee /etc/cron.d/titanagent &&
+      sudo nohup ./agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key > agent.log 2>&1 &
     "
 
     echo -e "${GREEN}✅ $name đã chạy Titan Agent.${NC}"
@@ -59,7 +66,17 @@ create_nodes() {
 # === XOÁ TẤT CẢ NODE ===
 delete_all_nodes() {
   echo -e "${RED}🚨 Xóa tất cả các node Multipass...${NC}"
-  multipass list | awk '/RUNNING|STOPPED/ {print $1}' | xargs -r -I {} multipass delete {}
+  all_nodes=$(multipass list --format csv | tail -n +2 | cut -d',' -f1 | grep '^titan-node-')
+
+  if [ -z "$all_nodes" ]; then
+    echo -e "${CYAN}📭 Không có node nào để xóa.${NC}"
+    return
+  fi
+
+  for node in $all_nodes; do
+    multipass delete "$node"
+  done
+
   multipass purge
   echo -e "${GREEN}✅ Đã xóa tất cả node.${NC}"
 }
