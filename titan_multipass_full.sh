@@ -6,7 +6,7 @@ TITAN_URL="https://pcdn.titannet.io/test4/bin/agent-linux.zip"
 TITAN_API="https://test4-api.titannet.io"
 IMAGE="20.04"
 
-# === MÀU SẮC ===
+# === MÀU SẬC ===
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
@@ -56,6 +56,14 @@ create_nodes() {
   done
 }
 
+# === XOÁ TẤT CẢ NODE ===
+delete_all_nodes() {
+  echo -e "${RED}🚨 Xóa tất cả các node Multipass...${NC}"
+  multipass list | awk '/RUNNING|STOPPED/ {print $1}' | xargs -I {} multipass delete {}
+  multipass purge
+  echo -e "${GREEN}✅ Đã xóa tất cả node.${NC}"
+}
+
 # === XEM DANH SÁCH NODE ===
 list_nodes() {
   echo -e "${CYAN}📋 Danh sách node Multipass:${NC}"
@@ -77,6 +85,13 @@ delete_node() {
   echo -e "${GREEN}✅ Đã xoá node $node_name.${NC}"
 }
 
+# === Hướng dẫn tạo tài khoản Titan ===
+guide_create_account() {
+  echo -e "\n${CYAN}🔐 Hướng dẫn tạo tài khoản Titan:${NC}"
+  echo -e "1. Truy cập link: ${GREEN}https://test4.titannet.io/Invitelogin?code=2zNL3u${NC}"
+  echo -e "2. Đăng ký tài khoản và lấy key trong trang Dashboard"
+}
+
 # === MENU GIAO DIỆN ===
 while true; do
   echo -e "\n${CYAN}========= TITAN MULTIPASS MANAGER =========${NC}"
@@ -85,9 +100,11 @@ while true; do
   echo -e "3️⃣  Xem danh sách node"
   echo -e "4️⃣  Truy cập vào node"
   echo -e "5️⃣  Xoá node"
+  echo -e "6️⃣  Xoá tất cả node"
+  echo -e "7️⃣  Hướng dẫn tạo tài khoản Titan"
   echo -e "0️⃣  Thoát"
   echo -e "${CYAN}===========================================${NC}"
-  read -p "👉 Chọn một tùy chọn (0-5): " choice
+  read -p "🔀 Chọn một tùy chọn (0-7): " choice
 
   case "$choice" in
     1) check_dependencies ;;
@@ -95,7 +112,10 @@ while true; do
     3) list_nodes ;;
     4) access_node ;;
     5) delete_node ;;
+    6) delete_all_nodes ;;
+    7) guide_create_account ;;
     0) echo -e "${GREEN}👋 Tạm biệt!${NC}"; exit 0 ;;
     *) echo -e "${RED}❌ Lựa chọn không hợp lệ!${NC}" ;;
   esac
+
 done
