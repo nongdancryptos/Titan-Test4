@@ -37,18 +37,23 @@ create_nodes() {
     docker rm -f $name 2>/dev/null
 
     proxy_env=""
-    proxy_check_cmd="curl -s --max-time 10 --head $TITAN_API"
+    check_cmd=(curl -s --max-time 10 --head $TITAN_API)
 
     if [ -n "$proxy" ]; then
-      proxy_env="-e HTTP_PROXY=$proxy -e HTTPS_PROXY=$proxy -e http_proxy=$proxy -e https_proxy=$proxy"
+      proxy_env=(
+        -e HTTP_PROXY="$proxy"
+        -e HTTPS_PROXY="$proxy"
+        -e http_proxy="$proxy"
+        -e https_proxy="$proxy"
+      )
       echo -e "🔌 Kiểm tra kết nối server qua proxy..."
-      if ! docker run --rm $proxy_env curl -s --max-time 10 --head $TITAN_API | grep -q "200 OK"; then
+      if ! docker run --rm "${proxy_env[@]}" curlimages/curl curl -s --max-time 10 --head $TITAN_API | grep -q "200 OK"; then
         echo -e "${RED}❌ Proxy không thể kết nối đến server Titan. Bỏ qua node này.${NC}"
         continue
       fi
     else
       echo -e "🔌 Kiểm tra kết nối server..."
-      if ! docker run --rm curl -s --max-time 10 --head $TITAN_API | grep -q "200 OK"; then
+      if ! docker run --rm curlimages/curl curl -s --max-time 10 --head $TITAN_API | grep -q "200 OK"; then
         echo -e "${RED}❌ Không thể kết nối đến server Titan. Bỏ qua node này.${NC}"
         continue
       fi
@@ -57,7 +62,7 @@ create_nodes() {
     docker run -d \
       --name $name \
       --restart unless-stopped \
-      $proxy_env \
+      "${proxy_env[@]}" \
       ubuntu:20.04 \
       bash -c "apt update && apt install -y wget unzip curl && \
       mkdir -p $INSTALL_DIR && cd $INSTALL_DIR && \
