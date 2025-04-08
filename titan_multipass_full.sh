@@ -39,14 +39,19 @@ create_nodes() {
     name="titan-node-$i"
 
     if multipass info $name >/dev/null 2>&1; then
-      echo -e "${RED}⚠️ VM $name đã tồn tại, bỏ qua.${NC}"
-      continue
+      echo -e "${RED}⚠️ VM $name đã tồn tại, xóa và tạo lại...${NC}"
+      multipass delete $name && multipass purge
     fi
 
     read -p "🌐 Nhập proxy cho node $name (để trống nếu không dùng): " proxy_url
 
     echo -e "\n${CYAN}🚀 Tạo VM: $name...${NC}"
     multipass launch $IMAGE --name $name --memory 2G --disk 10G --cpus 2
+
+    echo -e "${CYAN}⏳ Chờ VM $name có IP...${NC}"
+    while [ -z "$(multipass info $name | grep 'IPv4' | awk '{print $2}')" ]; do
+      sleep 2
+    done
 
     echo -e "${CYAN}⚙️ Cài Titan Agent trong $name...${NC}"
     multipass exec $name -- bash -c "
