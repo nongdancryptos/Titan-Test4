@@ -68,6 +68,12 @@ wget https://github.com/nongdancryptos/Titan-Test4/raw/refs/heads/main/titan_mul
 chmod +x titan_multipass_full.sh
 ./titan_multipass_full.sh
 ```
+---- hoặc
+```bash
+wget https://github.com/nongdancryptos/Titan-Test4/raw/refs/heads/main/titanproxy.sh
+chmod +x titan_multipass_full.sh
+./titan_multipass_full.sh
+```
 
 ---
 
