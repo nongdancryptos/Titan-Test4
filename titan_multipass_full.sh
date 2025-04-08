@@ -72,13 +72,22 @@ list_nodes() {
   docker ps -a --filter "name=titan-node-"
 }
 
-# === KHỞI CHẠY LẠI CONTAINER ===
-restart_node() {
-  read -p "🔄 Nhập tên container muốn khởi động lại (VD: titan-node-1): " node_name
-  echo -e "${CYAN}♻️ Khởi động lại $node_name...${NC}"
+# === KHỞI CHẠY LẠI TẤT CẢ CONTAINER ===
+restart_all_nodes() {
+  echo -e "${CYAN}♻️ Khởi động lại tất cả các container Titan...${NC}"
+  all_nodes=$(docker ps -a --format '{{.Names}}' | grep '^titan-node-')
 
-  docker restart "$node_name"
-  echo -e "${GREEN}✅ Container $node_name đã được khởi động lại.${NC}"
+  if [ -z "$all_nodes" ]; then
+    echo -e "${CYAN}📝 Không có container nào để khởi động lại.${NC}"
+    return
+  fi
+
+  for node in $all_nodes; do
+    echo -e "🔄 Khởi động lại container: $node"
+    docker restart "$node"
+  done
+
+  echo -e "${GREEN}✅ Tất cả container Titan đã được khởi động lại.${NC}"
 }
 
 # === TRUY CẬP VÀO CONTAINER ===
@@ -111,7 +120,7 @@ while true; do
   echo -e "4️⃣  Xem log Titan Agent của một container"
   echo -e "5️⃣  Xoá một container"
   echo -e "6️⃣  Xoá tất cả container"
-  echo -e "7️⃣  Khởi động lại container"
+  echo -e "7️⃣  Khởi động lại tất cả container"
   echo -e "0️⃣  Thoát"
   echo -e "${CYAN}========================================${NC}"
   read -p "🔀 Chọn một tùy chọn (0-7): " choice
@@ -123,7 +132,7 @@ while true; do
     4) view_node_logs ;;
     5) delete_node ;;
     6) delete_all_nodes ;;
-    7) restart_node ;;
+    7) restart_all_nodes ;;
     0) echo -e "${GREEN}👋 Tạm biệt!${NC}"; exit 0 ;;
     *) echo -e "${RED}❌ Lựa chọn không hợp lệ!${NC}" ;;
   esac
