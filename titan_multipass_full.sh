@@ -6,7 +6,7 @@ TITAN_URL="https://pcdn.titannet.io/test4/bin/agent-linux.zip"
 TITAN_API="https://test4-api.titannet.io"
 IMAGE="20.04"
 
-# === MÀU SẬC ===
+# === MÀU SẮC ===
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
@@ -44,12 +44,12 @@ create_nodes() {
     multipass exec $name -- bash -c "
       sudo apt update &&
       sudo apt install -y wget unzip &&
-      mkdir -p $INSTALL_DIR &&
+      sudo mkdir -p $INSTALL_DIR &&
       cd $INSTALL_DIR &&
-      wget -q $TITAN_URL &&
-      unzip agent-linux.zip &&
-      chmod +x agent &&
-      ./agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key
+      sudo wget -q $TITAN_URL &&
+      sudo unzip agent-linux.zip &&
+      sudo chmod +x agent &&
+      sudo ./agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key
     "
 
     echo -e "${GREEN}✅ $name đã chạy Titan Agent.${NC}"
@@ -59,7 +59,7 @@ create_nodes() {
 # === XOÁ TẤT CẢ NODE ===
 delete_all_nodes() {
   echo -e "${RED}🚨 Xóa tất cả các node Multipass...${NC}"
-  multipass list | awk '/RUNNING|STOPPED/ {print $1}' | xargs -I {} multipass delete {}
+  multipass list | awk '/RUNNING|STOPPED/ {print $1}' | xargs -r -I {} multipass delete {}
   multipass purge
   echo -e "${GREEN}✅ Đã xóa tất cả node.${NC}"
 }
