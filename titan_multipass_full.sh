@@ -62,9 +62,9 @@ create_nodes() {
       echo 'After=network.target' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
       echo '' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
       echo '[Service]' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
-      echo "Environment=HTTP_PROXY=$proxy_url" | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
-      echo "Environment=http_proxy=$proxy_url" | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
-      echo "ExecStart=$INSTALL_DIR/agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key" | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
+      echo \"Environment=HTTP_PROXY=$proxy_url\" | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
+      echo \"Environment=http_proxy=$proxy_url\" | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
+      echo \"ExecStart=$INSTALL_DIR/agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key\" | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
       echo 'Restart=always' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
       echo '' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
       echo '[Install]' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
@@ -82,6 +82,11 @@ create_nodes() {
 # === XOÁ TẤT CẢ NODE ===
 delete_all_nodes() {
   echo -e "${RED}🚨 Xóa tất cả các node Multipass...${NC}"
+  if ! command -v multipass >/dev/null 2>&1; then
+    echo -e "${RED}❌ multipass chưa được cài đặt.${NC}"
+    return
+  fi
+
   all_nodes=$(multipass list --format csv | tail -n +2 | cut -d',' -f1 | grep '^titan-node-')
 
   if [ -z "$all_nodes" ]; then
