@@ -42,7 +42,7 @@ create_nodes() {
       bash -c "apt update && apt install -y wget unzip curl && \
       mkdir -p $INSTALL_DIR && cd $INSTALL_DIR && \
       wget -q $TITAN_URL && unzip -o agent-linux.zip && chmod +x agent && \
-      while true; do ./agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key; sleep 10; done"
+      ./agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key"
 
     echo -e "${GREEN}✅ Container $name đang chạy Titan Agent.${NC}"
   done
@@ -70,6 +70,15 @@ delete_all_nodes() {
 list_nodes() {
   echo -e "${CYAN}📋 Danh sách container Titan:${NC}"
   docker ps -a --filter "name=titan-node-"
+}
+
+# === KHỞI CHẠY LẠI CONTAINER ===
+restart_node() {
+  read -p "🔄 Nhập tên container muốn khởi động lại (VD: titan-node-1): " node_name
+  echo -e "${CYAN}♻️ Khởi động lại $node_name...${NC}"
+
+  docker restart "$node_name"
+  echo -e "${GREEN}✅ Container $node_name đã được khởi động lại.${NC}"
 }
 
 # === TRUY CẬP VÀO CONTAINER ===
@@ -102,9 +111,10 @@ while true; do
   echo -e "4️⃣  Xem log Titan Agent của một container"
   echo -e "5️⃣  Xoá một container"
   echo -e "6️⃣  Xoá tất cả container"
+  echo -e "7️⃣  Khởi động lại container"
   echo -e "0️⃣  Thoát"
   echo -e "${CYAN}========================================${NC}"
-  read -p "🔀 Chọn một tùy chọn (0-6): " choice
+  read -p "🔀 Chọn một tùy chọn (0-7): " choice
 
   case "$choice" in
     1) check_dependencies ;;
@@ -113,6 +123,7 @@ while true; do
     4) view_node_logs ;;
     5) delete_node ;;
     6) delete_all_nodes ;;
+    7) restart_node ;;
     0) echo -e "${GREEN}👋 Tạm biệt!${NC}"; exit 0 ;;
     *) echo -e "${RED}❌ Lựa chọn không hợp lệ!${NC}" ;;
   esac
