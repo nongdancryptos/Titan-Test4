@@ -59,13 +59,13 @@ create_nodes() {
       proxy_envs="Environment=HTTP_PROXY=$proxy_url\nEnvironment=http_proxy=$proxy_url\nEnvironment=HTTPS_PROXY=$proxy_url\nEnvironment=https_proxy=$proxy_url\nEnvironment=NO_PROXY=localhost,127.0.0.1\nEnvironment=no_proxy=localhost,127.0.0.1"
     fi
 
-    multipass transfer <(echo -e "$proxy_exports") $name:/tmp/proxy.sh
+    multipass transfer <(echo "$proxy_exports") $name:/tmp/proxy.sh
 
     multipass exec $name -- bash -c "
-      sudo tee /etc/environment /etc/profile.d/proxy.sh >/dev/null <<< \"$proxy_exports\"
-      echo \"Acquire::http::Proxy \"$proxy_url\";\" | sudo tee /etc/apt/apt.conf.d/01proxy >/dev/null
-      echo \"Acquire::https::Proxy \"$proxy_url\";\" | sudo tee -a /etc/apt/apt.conf.d/01proxy >/dev/null
-      sudo chmod +x /tmp/proxy.sh && echo \"source /tmp/proxy.sh\" >> ~/.bashrc
+      sudo bash /tmp/proxy.sh >> ~/.bashrc
+      echo \"$proxy_exports\" | sudo tee -a /etc/environment /etc/profile /etc/profile.d/proxy.sh >/dev/null
+      echo 'Acquire::http::Proxy \"$proxy_url\";' | sudo tee /etc/apt/apt.conf.d/01proxy >/dev/null
+      echo 'Acquire::https::Proxy \"$proxy_url\";' | sudo tee -a /etc/apt/apt.conf.d/01proxy >/dev/null
       sudo apt update && sudo apt install -y wget unzip curl
       sudo mkdir -p $INSTALL_DIR && cd $INSTALL_DIR
       sudo wget -q $TITAN_URL && sudo unzip -o agent-linux.zip && sudo chmod +x agent
@@ -73,8 +73,8 @@ create_nodes() {
       echo 'Description=Titan Agent' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
       echo 'After=network.target' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
       echo '[Service]' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
-      echo -e \"$proxy_envs\" | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
-      echo "ExecStart=/usr/bin/env -S http_proxy=$proxy_url https_proxy=$proxy_url $INSTALL_DIR/agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key" | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
+      echo "$proxy_envs" | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
+      echo \"ExecStart=/usr/bin/env -S http_proxy=$proxy_url https_proxy=$proxy_url $INSTALL_DIR/agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key\" | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
       echo 'Restart=always' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
       echo '[Install]' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
       echo 'WantedBy=multi-user.target' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
@@ -183,4 +183,5 @@ while true; do
     0) echo -e "${GREEN}👋 Tạm biệt!${NC}"; exit 0 ;;
     *) echo -e "${RED}❌ Lựa chọn không hợp lệ!${NC}" ;;
   esac
+
 done
