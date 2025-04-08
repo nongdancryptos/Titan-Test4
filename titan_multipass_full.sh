@@ -60,7 +60,7 @@ create_nodes() {
       echo 'Description=Titan Agent' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
       echo 'After=network.target' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
       echo '[Service]' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
-      echo "ExecStart=$INSTALL_DIR/agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key" | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
+      echo 'ExecStart=$INSTALL_DIR/agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key --log-path=$INSTALL_DIR/agent.log' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
       echo 'Restart=always' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
       echo '[Install]' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
       echo 'WantedBy=multi-user.target' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
