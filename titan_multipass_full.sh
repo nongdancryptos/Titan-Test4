@@ -43,20 +43,26 @@ create_nodes() {
       continue
     fi
 
+    read -p "🌐 Nhập proxy cho node $name (để trống nếu không dùng): " proxy_url
+
     echo -e "\n${CYAN}🚀 Tạo VM: $name...${NC}"
     multipass launch $IMAGE --name $name --memory 2G --disk 10G --cpus 2
 
     echo -e "${CYAN}⚙️ Cài Titan Agent trong $name...${NC}"
     multipass exec $name -- bash -c "
+      export http_proxy=$proxy_url
+      export https_proxy=$proxy_url
+      export HTTP_PROXY=$proxy_url
+      export HTTPS_PROXY=$proxy_url
       sudo apt update &&
       sudo apt install -y wget unzip &&
       sudo mkdir -p $INSTALL_DIR &&
       cd $INSTALL_DIR &&
       sudo wget -q $TITAN_URL &&
-      sudo unzip agent-linux.zip &&
+      sudo unzip -o agent-linux.zip &&
       sudo chmod +x agent &&
-      echo '@reboot root nohup /opt/titanagent/agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key > /opt/titanagent/agent.log 2>&1 &' | sudo tee /etc/cron.d/titanagent &&
-      sudo nohup ./agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key > agent.log 2>&1 &
+      echo '@reboot root /opt/titanagent/agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key >> /opt/titanagent/agent.log 2>&1 &' | sudo tee /etc/cron.d/titanagent >/dev/null &&
+      sudo ./agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key >> agent.log 2>&1 &
     "
 
     echo -e "${GREEN}✅ $name đã chạy Titan Agent.${NC}"
@@ -77,6 +83,7 @@ delete_all_nodes() {
     multipass delete "$node"
   done
 
+  sleep 2
   multipass purge
   echo -e "${GREEN}✅ Đã xóa tất cả node.${NC}"
 }
@@ -98,6 +105,7 @@ access_node() {
 delete_node() {
   read -p "🗑️ Nhập tên node muốn xoá (VD: titan-node-1): " node_name
   multipass delete "$node_name"
+  sleep 2
   multipass purge
   echo -e "${GREEN}✅ Đã xoá node $node_name.${NC}"
 }
