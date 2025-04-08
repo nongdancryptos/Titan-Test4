@@ -75,13 +75,17 @@ list_nodes() {
 # === KHỞI CHẠY LẠI TẤT CẢ CONTAINER ===
 restart_all_nodes() {
   echo -e "${CYAN}♻️ Khởi động lại tất cả các container Titan...${NC}"
+  
+  # Lấy tất cả container có tên bắt đầu với "titan-node-"
   all_nodes=$(docker ps -a --format '{{.Names}}' | grep '^titan-node-')
 
+  # Kiểm tra xem có container nào hay không
   if [ -z "$all_nodes" ]; then
     echo -e "${CYAN}📝 Không có container nào để khởi động lại.${NC}"
     return
   fi
 
+  # Lặp qua từng container và thực hiện lệnh restart
   for node in $all_nodes; do
     echo -e "🔄 Khởi động lại container: $node"
     docker restart "$node"
@@ -132,7 +136,7 @@ while true; do
     4) view_node_logs ;;
     5) delete_node ;;
     6) delete_all_nodes ;;
-    7) restart_all_nodes ;;
+    7) restart_all_nodes ;;   # Tùy chọn này sẽ tự động khởi động lại tất cả các node mà không cần nhập tên
     0) echo -e "${GREEN}👋 Tạm biệt!${NC}"; exit 0 ;;
     *) echo -e "${RED}❌ Lựa chọn không hợp lệ!${NC}" ;;
   esac
