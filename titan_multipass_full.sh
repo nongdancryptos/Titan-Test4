@@ -42,7 +42,7 @@ create_nodes() {
       bash -c "apt update && apt install -y wget unzip curl && \
       mkdir -p $INSTALL_DIR && cd $INSTALL_DIR && \
       wget -q $TITAN_URL && unzip -o agent-linux.zip && chmod +x agent && \
-      ./agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key"
+      while true; do ./agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key; sleep 10; done"
 
     echo -e "${GREEN}✅ Container $name đang chạy Titan Agent.${NC}"
   done
