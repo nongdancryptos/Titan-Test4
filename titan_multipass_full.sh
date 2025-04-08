@@ -53,8 +53,9 @@ create_nodes() {
       sleep 2
     done
 
-    echo -e "${CYAN}⚙️ Cài Titan Agent trong $name...${NC}"
+    echo -e "${CYAN}⚙️ Gắn proxy & cài Titan Agent trong $name...${NC}"
     multipass exec $name -- bash -c "
+      echo 'Acquire::http::Proxy \"$proxy_url\";' | sudo tee /etc/apt/apt.conf.d/01proxy >/dev/null
       sudo apt update &&
       sudo apt install -y wget unzip &&
       sudo mkdir -p $INSTALL_DIR &&
@@ -80,7 +81,7 @@ create_nodes() {
       sudo systemctl start titanagent
     "
 
-    echo -e "${GREEN}✅ $name đã chạy Titan Agent.${NC}"
+    echo -e "${GREEN}✅ $name đã chạy Titan Agent với proxy.${NC}"
   done
 }
 
