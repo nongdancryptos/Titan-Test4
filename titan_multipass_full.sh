@@ -99,8 +99,9 @@ delete_all_nodes() {
   done
 
   sleep 2
+  echo -e "${CYAN}🧹 Dọn dẹp disk ảo...${NC}"
   multipass purge
-  echo -e "${GREEN}✅ Đã xóa tất cả node.${NC}"
+  echo -e "${GREEN}✅ Đã xóa tất cả node và giải phóng tài nguyên.${NC}"
 }
 
 # === XEM DANH SÁCH NODE ===
@@ -121,8 +122,9 @@ delete_node() {
   read -p "🗑️ Nhập tên node muốn xoá (VD: titan-node-1): " node_name
   multipass delete "$node_name"
   sleep 2
+  echo -e "${CYAN}🧹 Dọn dẹp disk ảo...${NC}"
   multipass purge
-  echo -e "${GREEN}✅ Đã xoá node $node_name.${NC}"
+  echo -e "${GREEN}✅ Đã xoá node $node_name và giải phóng tài nguyên.${NC}"
 }
 
 # === Hướng dẫn tạo tài khoản Titan ===
