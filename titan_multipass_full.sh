@@ -50,10 +50,6 @@ create_nodes() {
 
     echo -e "${CYAN}⚙️ Cài Titan Agent trong $name...${NC}"
     multipass exec $name -- bash -c "
-      export http_proxy=$proxy_url
-      export https_proxy=$proxy_url
-      export HTTP_PROXY=$proxy_url
-      export HTTPS_PROXY=$proxy_url
       sudo apt update &&
       sudo apt install -y wget unzip &&
       sudo mkdir -p $INSTALL_DIR &&
@@ -61,8 +57,22 @@ create_nodes() {
       sudo wget -q $TITAN_URL &&
       sudo unzip -o agent-linux.zip &&
       sudo chmod +x agent &&
-      echo '@reboot root /opt/titanagent/agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key >> /opt/titanagent/agent.log 2>&1 &' | sudo tee /etc/cron.d/titanagent >/dev/null &&
-      sudo ./agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key >> agent.log 2>&1 &
+      echo '[Unit]' | sudo tee /etc/systemd/system/titanagent.service > /dev/null &&
+      echo 'Description=Titan Agent' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
+      echo 'After=network.target' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
+      echo '' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
+      echo '[Service]' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
+      echo "Environment=HTTP_PROXY=$proxy_url" | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
+      echo "Environment=http_proxy=$proxy_url" | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
+      echo "ExecStart=$INSTALL_DIR/agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key" | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
+      echo 'Restart=always' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
+      echo '' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
+      echo '[Install]' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
+      echo 'WantedBy=multi-user.target' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
+      sudo systemctl daemon-reexec &&
+      sudo systemctl daemon-reload &&
+      sudo systemctl enable titanagent &&
+      sudo systemctl start titanagent
     "
 
     echo -e "${GREEN}✅ $name đã chạy Titan Agent.${NC}"
