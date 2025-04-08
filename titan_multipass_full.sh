@@ -22,6 +22,12 @@ check_dependencies() {
   else
     echo -e "${GREEN}✅ Docker đã được cài đặt.${NC}"
   fi
+  
+  # Đảm bảo Docker service tự động khởi động cùng hệ thống
+  echo -e "${CYAN}🔄 Đảm bảo Docker service tự khởi động cùng hệ thống...${NC}"
+  sudo systemctl enable docker
+  sudo systemctl start docker
+  echo -e "${GREEN}✅ Docker service đã được cấu hình để tự khởi động cùng hệ thống.${NC}"
 }
 
 # === TẠO CONTAINER TITAN ===
