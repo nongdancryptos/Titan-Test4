@@ -39,18 +39,11 @@ create_nodes() {
     name="titan-node-$i"
 
     if multipass info $name >/dev/null 2>&1; then
-      echo -e "${RED}⚠️ VM $name đã tồn tại.${NC}"
-      read -p "❓ Bạn có muốn xóa và tạo lại không? (y/N): " confirm
-      if [[ "$confirm" =~ ^[Yy]$ ]]; then
-        echo -e "${CYAN}🗑️ Đang xóa VM $name...${NC}"
-        multipass delete $name && multipass purge
-      else
-        echo -e "${CYAN}⏩ Bỏ qua VM $name.${NC}"
-        continue
-      fi
+      echo -e "${RED}⚠️ VM $name đã tồn tại, xóa và tạo lại...${NC}"
+      multipass delete $name && multipass purge
     fi
 
-    read -p "🌐 Nhập proxy cho node $name (định dạng http://user:pass@host:port hoặc http://host:port): " proxy_url
+    read -p "🌐 Nhập proxy cho node $name (để trống nếu không dùng): " proxy_url
 
     echo -e "\n${CYAN}🚀 Tạo VM: $name...${NC}"
     multipass launch $IMAGE --name $name --memory 2G --disk 10G --cpus 2
@@ -61,25 +54,34 @@ create_nodes() {
     done
 
     echo -e "${CYAN}⚙️ Gắn proxy & cài Titan Agent trong $name...${NC}"
+    if [[ -n "$proxy_url" ]]; then
+      proxy_exports="export http_proxy=$proxy_url\nexport https_proxy=$proxy_url\nexport HTTP_PROXY=$proxy_url\nexport HTTPS_PROXY=$proxy_url\nexport no_proxy=localhost,127.0.0.1\nexport NO_PROXY=localhost,127.0.0.1"
+      proxy_envs="Environment=HTTP_PROXY=$proxy_url\nEnvironment=http_proxy=$proxy_url\nEnvironment=HTTPS_PROXY=$proxy_url\nEnvironment=https_proxy=$proxy_url\nEnvironment=NO_PROXY=localhost,127.0.0.1\nEnvironment=no_proxy=localhost,127.0.0.1"
+    fi
+
+    multipass transfer <(echo "$proxy_exports") $name:/tmp/proxy.sh
+
     multipass exec $name -- bash -c "
-      sudo apt update && sudo apt install -y wget unzip curl proxychains4
-      sudo sed -i 's/^strict_chain/#strict_chain/' /etc/proxychains4.conf
-      sudo sed -i '/^http/d' /etc/proxychains4.conf
-      echo 'http ${proxy_url#http://}' | sudo tee -a /etc/proxychains4.conf
+      sudo bash /tmp/proxy.sh >> ~/.bashrc
+      echo \"$proxy_exports\" | sudo tee -a /etc/environment /etc/profile /etc/profile.d/proxy.sh >/dev/null
+      echo 'Acquire::http::Proxy \"$proxy_url\";' | sudo tee /etc/apt/apt.conf.d/01proxy >/dev/null
+      echo 'Acquire::https::Proxy \"$proxy_url\";' | sudo tee -a /etc/apt/apt.conf.d/01proxy >/dev/null
+      sudo apt update && sudo apt install -y wget unzip curl
       sudo mkdir -p $INSTALL_DIR && cd $INSTALL_DIR
       sudo wget -q $TITAN_URL && sudo unzip -o agent-linux.zip && sudo chmod +x agent
       echo '[Unit]' | sudo tee /etc/systemd/system/titanagent.service > /dev/null
       echo 'Description=Titan Agent' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
       echo 'After=network.target' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
       echo '[Service]' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
-      echo "ExecStart=/usr/bin/proxychains4 -f /etc/proxychains4.conf $INSTALL_DIR/agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key" | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
+      echo "$proxy_envs" | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
+      echo \"ExecStart=/usr/bin/env -S http_proxy=$proxy_url https_proxy=$proxy_url $INSTALL_DIR/agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key\" | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
       echo 'Restart=always' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
       echo '[Install]' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
       echo 'WantedBy=multi-user.target' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
       sudo systemctl daemon-reexec && sudo systemctl daemon-reload
       sudo systemctl enable titanagent && sudo systemctl restart titanagent"
 
-    echo -e "${GREEN}✅ $name đã chạy Titan Agent qua proxy HTTP.${NC}"
+    echo -e "${GREEN}✅ $name đã chạy Titan Agent với proxy.${NC}"
   done
 }
 
@@ -138,6 +140,22 @@ guide_create_account() {
   echo -e "2. Đăng ký tài khoản và lấy key trong trang Dashboard"
 }
 
+# === XEM TRẠNG THÁI TITAN AGENT TRONG CÁC NODE ===
+check_status_all_nodes() {
+  echo -e "${CYAN}📡 Kiểm tra trạng thái Titan Agent trong các node...${NC}"
+  all_nodes=$(multipass list --format csv | tail -n +2 | cut -d',' -f1 | grep '^titan-node-')
+
+  if [ -z "$all_nodes" ]; then
+    echo -e "${CYAN}📭 Không có node nào đang chạy.${NC}"
+    return
+  fi
+
+  for node in $all_nodes; do
+    echo -e "\n${GREEN}📌 Trạng thái của $node:${NC}"
+    multipass exec "$node" -- systemctl status titanagent --no-pager | head -n 10
+  done
+}
+
 # === MENU GIAO DIỆN ===
 while true; do
   echo -e "\n${CYAN}========= TITAN MULTIPASS MANAGER =========${NC}"
@@ -148,6 +166,7 @@ while true; do
   echo -e "5️⃣  Xoá node"
   echo -e "6️⃣  Xoá tất cả node"
   echo -e "7️⃣  Hướng dẫn tạo tài khoản Titan"
+  echo -e "8️⃣  Xem trạng thái Titan Agent trong các node"
   echo -e "0️⃣  Thoát"
   echo -e "${CYAN}===========================================${NC}"
   read -p "🔀 Chọn một tùy chọn (0-7): " choice
@@ -160,6 +179,7 @@ while true; do
     5) delete_node ;;
     6) delete_all_nodes ;;
     7) guide_create_account ;;
+    8) check_status_all_nodes ;;
     0) echo -e "${GREEN}👋 Tạm biệt!${NC}"; exit 0 ;;
     *) echo -e "${RED}❌ Lựa chọn không hợp lệ!${NC}" ;;
   esac
