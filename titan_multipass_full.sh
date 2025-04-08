@@ -82,13 +82,17 @@ delete_all_nodes() {
   all_nodes=$(multipass list --format csv | tail -n +2 | cut -d',' -f1)
 
   if [ -z "$all_nodes" ]; then
-    echo -e "${CYAN}📭 Không có node nào để xóa.${NC}"
+    echo -e "${CYAN}📝 Không có node nào để xóa.${NC}"
     return
   fi
 
   failed_nodes=()
 
   for node in $all_nodes; do
+    echo -e "🛑 Dừng node: $node"
+    multipass stop "$node"
+    sleep 2
+    multipass stop "$node" 2>/dev/null
     echo -e "🗑️ Đang xoá node: $node"
     multipass delete "$node" || failed_nodes+=("$node")
   done
@@ -116,13 +120,14 @@ list_nodes() {
 # === TRUY CẬP VÀO NODE ===
 access_node() {
   read -p "💻 Nhập tên node muốn vào (VD: titan-node-1): " node_name
-  echo -e "${CYAN}🔁 Truy cập vào $node_name...${NC}"
+  echo -e "${CYAN}♻️ Truy cập vào $node_name...${NC}"
   multipass shell "$node_name"
 }
 
 # === XOÁ NODE ===
 delete_node() {
   read -p "🗑️ Nhập tên node muốn xoá (VD: titan-node-1): " node_name
+  multipass stop "$node_name"
   multipass delete "$node_name"
   sleep 2
   echo -e "${CYAN}🧹 Dọn dẹp disk ảo...${NC}"
