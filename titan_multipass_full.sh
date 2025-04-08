@@ -39,11 +39,18 @@ create_nodes() {
     name="titan-node-$i"
 
     if multipass info $name >/dev/null 2>&1; then
-      echo -e "${RED}⚠️ VM $name đã tồn tại, xóa và tạo lại...${NC}"
-      multipass delete $name && multipass purge
+      echo -e "${RED}⚠️ VM $name đã tồn tại.${NC}"
+      read -p "❓ Bạn có muốn xóa và tạo lại không? (y/N): " confirm
+      if [[ "$confirm" =~ ^[Yy]$ ]]; then
+        echo -e "${CYAN}🗑️ Đang xóa VM $name...${NC}"
+        multipass delete $name && multipass purge
+      else
+        echo -e "${CYAN}⏩ Bỏ qua VM $name.${NC}"
+        continue
+      fi
     fi
 
-    read -p "🌐 Nhập proxy cho node $name (để trống nếu không dùng): " proxy_url
+    read -p "🌐 Nhập proxy cho node $name (định dạng http://user:pass@host:port hoặc http://host:port): " proxy_url
 
     echo -e "\n${CYAN}🚀 Tạo VM: $name...${NC}"
     multipass launch $IMAGE --name $name --memory 2G --disk 10G --cpus 2
@@ -54,43 +61,25 @@ create_nodes() {
     done
 
     echo -e "${CYAN}⚙️ Gắn proxy & cài Titan Agent trong $name...${NC}"
-    proxy_exports=""
-    proxy_envs=""
-    proxy_flag=""
-    if [[ -n "$proxy_url" ]]; then
-      proxy_exports="\nexport http_proxy=$proxy_url\nexport https_proxy=$proxy_url\nexport HTTP_PROXY=$proxy_url\nexport HTTPS_PROXY=$proxy_url\nexport no_proxy=localhost,127.0.0.1\nexport NO_PROXY=localhost,127.0.0.1"
-      proxy_envs="\nEnvironment=HTTP_PROXY=$proxy_url\nEnvironment=http_proxy=$proxy_url\nEnvironment=HTTPS_PROXY=$proxy_url\nEnvironment=https_proxy=$proxy_url\nEnvironment=NO_PROXY=localhost,127.0.0.1\nEnvironment=no_proxy=localhost,127.0.0.1"
-      proxy_flag=" --proxy=$proxy_url"
-    fi
-
     multipass exec $name -- bash -c "
-      echo 'Acquire::http::Proxy \"$proxy_url\";' | sudo tee /etc/apt/apt.conf.d/01proxy >/dev/null
-      echo '$proxy_exports' >> ~/.bashrc
-      echo '$proxy_exports' | sudo tee -a /etc/environment >/dev/null
-      echo '$proxy_exports' | sudo tee -a /etc/profile >/dev/null
-      echo '$proxy_exports' | sudo tee -a /etc/profile.d/proxy.sh >/dev/null
-      sudo apt update &&
-      sudo apt install -y wget unzip &&
-      sudo mkdir -p $INSTALL_DIR &&
-      cd $INSTALL_DIR &&
-      sudo wget -q $TITAN_URL &&
-      sudo unzip -o agent-linux.zip &&
-      sudo chmod +x agent &&
-      echo '[Unit]' | sudo tee /etc/systemd/system/titanagent.service > /dev/null &&
-      echo 'Description=Titan Agent' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
-      echo 'After=network.target' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
-      echo '[Service]' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
-      echo "$proxy_envs" | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
-      echo "ExecStart=$INSTALL_DIR/agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key$proxy_flag" | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
-      echo 'Restart=always' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
-      echo '[Install]' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
-      echo 'WantedBy=multi-user.target' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null &&
-      sudo systemctl daemon-reexec &&
-      sudo systemctl daemon-reload &&
-      sudo systemctl enable titanagent &&
-      sudo systemctl start titanagent"
+      sudo apt update && sudo apt install -y wget unzip curl proxychains4
+      sudo sed -i 's/^strict_chain/#strict_chain/' /etc/proxychains4.conf
+      sudo sed -i '/^http/d' /etc/proxychains4.conf
+      echo 'http ${proxy_url#http://}' | sudo tee -a /etc/proxychains4.conf
+      sudo mkdir -p $INSTALL_DIR && cd $INSTALL_DIR
+      sudo wget -q $TITAN_URL && sudo unzip -o agent-linux.zip && sudo chmod +x agent
+      echo '[Unit]' | sudo tee /etc/systemd/system/titanagent.service > /dev/null
+      echo 'Description=Titan Agent' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
+      echo 'After=network.target' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
+      echo '[Service]' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
+      echo "ExecStart=/usr/bin/proxychains4 -f /etc/proxychains4.conf $INSTALL_DIR/agent --working-dir=$INSTALL_DIR --server-url=$TITAN_API --key=$titan_key" | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
+      echo 'Restart=always' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
+      echo '[Install]' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
+      echo 'WantedBy=multi-user.target' | sudo tee -a /etc/systemd/system/titanagent.service > /dev/null
+      sudo systemctl daemon-reexec && sudo systemctl daemon-reload
+      sudo systemctl enable titanagent && sudo systemctl restart titanagent"
 
-    echo -e "${GREEN}✅ $name đã chạy Titan Agent với proxy.${NC}"
+    echo -e "${GREEN}✅ $name đã chạy Titan Agent qua proxy HTTP.${NC}"
   done
 }
 
